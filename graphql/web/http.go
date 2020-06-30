@@ -116,6 +116,9 @@ func (gs *graphqlSubscription) Subscribe(
 	operationName string,
 	variableValues map[string]interface{}) (payloads <-chan interface{},
 	err error) {
+	// Extract JWT from context and validate it. If its invalid, then return error.
+	// Also possible that JWT doesn't exist.
+	// Send across JWT data.
 	req := &schema.Request{
 		OperationName: operationName,
 		Query:         document,

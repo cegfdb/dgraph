@@ -69,6 +69,7 @@ func (p *Poller) AddSubscriber(req *schema.Request) (*SubscriberResponse, error)
 	buf, err := json.Marshal(req)
 	x.Check(err)
 
+	// TODO - Also take into account Auth variables for fingerprinting from CustomClaims.
 	bucketID := farm.Fingerprint64(buf)
 	p.Lock()
 	defer p.Unlock()
@@ -91,6 +92,8 @@ func (p *Poller) AddSubscriber(req *schema.Request) (*SubscriberResponse, error)
 		subscriptions = make(map[uint64]chan interface{})
 	}
 	glog.Infof("Subscription polling is started for the ID %d", subscriptionID)
+	// subscriptions[subscriptionID] = struct{expiry: , updateCh}
+	// expiry comes from custom claims.
 	subscriptions[subscriptionID] = updateCh
 	p.pollRegistry[bucketID] = subscriptions
 
@@ -162,6 +165,8 @@ func (p *Poller) poll(req *pollRequest) {
 				p.Unlock()
 				return
 			}
+			// TODO - go through all subscribers and check expiry
+			// terminate subscribers which have expired using terminateSubscription function below.
 			p.Unlock()
 			continue
 		}
@@ -175,6 +180,8 @@ func (p *Poller) poll(req *pollRequest) {
 			p.Unlock()
 			return
 		}
+		// TODO - go through all subscribers and check expiry
+		// terminate subscribers which have expired using terminateSubscription function below.
 		for _, updateCh := range subscribers {
 			updateCh <- res.Output()
 		}
@@ -208,6 +215,10 @@ func (p *Poller) terminateSubscriptions(bucketID uint64) {
 func (p *Poller) TerminateSubscription(bucketID, subscriptionID uint64) {
 	p.Lock()
 	defer p.Unlock()
+	p.terminateSubscription(bucketID, subscriptionID)
+}
+
+func (p *Poller) terminateSubscription(bucketID, subscriptionID uint64) {
 	subscriptions, ok := p.pollRegistry[bucketID]
 	if !ok {
 		return
