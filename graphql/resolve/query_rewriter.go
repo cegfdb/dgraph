@@ -49,6 +49,7 @@ func (qr *queryRewriter) Rewrite(
 	ctx context.Context,
 	gqlQuery schema.Query) (*gql.GraphQuery, error) {
 
+	fmt.Println("here: ", ctx)
 	authVariables, err := authorization.ExtractAuthVariables(ctx)
 	if err != nil {
 		return nil, err

@@ -19,6 +19,7 @@ package subscription
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"math"
 	"sync"
 	"sync/atomic"
@@ -64,8 +65,10 @@ type subscriber struct {
 
 // AddSubscriber tries to add subscription into the existing polling goroutine if it exists.
 // If it doesn't exist, then it creates a new polling goroutine for the given request.
-func (p *Poller) AddSubscriber(req *schema.Request, customClaims *authorization.CustomClaims) (*SubscriberResponse, error) {
+func (p *Poller) AddSubscriber(ctx context.Context, req *schema.Request, customClaims *authorization.CustomClaims) (*SubscriberResponse, error) {
+	fmt.Println("ctx in add subscriber ", ctx)
 	localEpoch := atomic.LoadUint64(p.globalEpoch)
+
 	if customClaims == nil {
 		customClaims = &authorization.CustomClaims{}
 		customClaims.ExpiresAt = (time.Time{}).Unix()
@@ -90,7 +93,7 @@ func (p *Poller) AddSubscriber(req *schema.Request, customClaims *authorization.
 	p.Lock()
 	defer p.Unlock()
 
-	res := p.resolver.Resolve(context.TODO(), req)
+	res := p.resolver.Resolve(ctx, req)
 	if len(res.Errors) != 0 {
 		return nil, res.Errors
 	}
@@ -130,6 +133,7 @@ func (p *Poller) AddSubscriber(req *schema.Request, customClaims *authorization.
 		prevHash:   prevHash,
 		graphqlReq: req,
 		localEpoch: localEpoch,
+		ctx:        ctx,
 	}
 	go p.poll(pollR)
 
@@ -141,6 +145,7 @@ func (p *Poller) AddSubscriber(req *schema.Request, customClaims *authorization.
 }
 
 type pollRequest struct {
+	ctx        context.Context
 	prevHash   uint64
 	graphqlReq *schema.Request
 	bucketID   uint64
@@ -163,7 +168,8 @@ func (p *Poller) poll(req *pollRequest) {
 			return
 		}
 
-		res := resolver.Resolve(context.TODO(), req.graphqlReq)
+		fmt.Println("first time: ", req.ctx)
+		res := resolver.Resolve(req.ctx, req.graphqlReq)
 
 		currentHash := farm.Fingerprint64(res.Data.Bytes())
 

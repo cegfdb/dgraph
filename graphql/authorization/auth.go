@@ -171,6 +171,7 @@ func ExtractAuthVariables(ctx context.Context) (map[string]interface{}, error) {
 		return nil, nil
 	}
 
+	fmt.Printf("%+v\n", md)
 	jwtToken := md.Get(string(AuthJwtCtxKey))
 	if len(jwtToken) == 0 {
 		return nil, nil

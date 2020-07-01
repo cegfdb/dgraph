@@ -20,6 +20,7 @@ import (
 	"compress/gzip"
 	"context"
 	"encoding/json"
+	"fmt"
 	"strconv"
 
 	"io"
@@ -116,6 +117,7 @@ func (gs *graphqlSubscription) Subscribe(
 	operationName string,
 	variableValues map[string]interface{}) (payloads <-chan interface{},
 	err error) {
+	fmt.Println("ctx in subscribe: ", ctx)
 	customClaim, err := authorization.ExtractCustomClaims(ctx)
 	if err != nil {
 		return nil, err
@@ -127,7 +129,7 @@ func (gs *graphqlSubscription) Subscribe(
 		Variables:     variableValues,
 	}
 
-	res, err := gs.graphqlHandler.poller.AddSubscriber(req, customClaim)
+	res, err := gs.graphqlHandler.poller.AddSubscriber(ctx, req, customClaim)
 	if err != nil {
 		return nil, err
 	}
